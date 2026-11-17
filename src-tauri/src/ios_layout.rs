@@ -135,6 +135,71 @@ pub(crate) fn start_scene_follower(webview: &tauri::Webview) {
     });
 }
 
+const BUILD_TAG: &str = "duo-diag-3";
+
+/// 诊断：把系统实际给到的几何写进页面顶部浮层，20 秒后自动消失。
+/// 用来把「系统级 letterbox（scene 本身就窄）」和「我们的布局没撑开（scene 宽但 view 窄）」
+/// 区分开——这两种病根完全不同，修法也完全不同。
+pub(crate) fn report(webview: &tauri::Webview) {
+    let slot = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let sink = slot.clone();
+    let _ = webview.with_webview(move |platform| {
+        if let Some(text) = diag_text(platform.inner()) {
+            if let Ok(mut guard) = sink.lock() {
+                *guard = text;
+            }
+        }
+    });
+    let text = slot.lock().map(|g| g.clone()).unwrap_or_default();
+    if text.is_empty() {
+        return;
+    }
+    let script = format!(
+        "(function(){{try{{var t={lit};var d=document.getElementById('duo-diag');\
+         if(!d){{d=document.createElement('div');d.id='duo-diag';document.documentElement.appendChild(d);}}\
+         d.style.cssText='position:fixed;left:0;right:0;top:0;z-index:2147483647;background:rgba(0,0,0,.82);\
+color:#7CFC00;font:11px/1.45 ui-monospace,Menlo,monospace;padding:8px;white-space:pre-wrap;word-break:break-all';\
+d.textContent=t;document.title=t;setTimeout(function(){{d.remove();}},20000);}}catch(e){{}}}})()",
+        lit = format!("{:?}", text)
+    );
+    let _ = webview.eval(&script);
+}
+
+fn diag_text(inner: *mut c_void) -> Option<String> {
+    unsafe {
+        let view = inner.cast::<UIView>().as_ref()?;
+        let win = view.window();
+        let screen: *mut AnyObject = msg_send![objc2::class!(UIScreen), mainScreen];
+        let screen = screen.as_ref();
+        let screen_bounds: Option<CGRect> = screen.map(|s| msg_send![s, bounds]);
+        let screen_space: Option<CGRect> = screen.and_then(|s| {
+            let space: *mut AnyObject = msg_send![s, coordinateSpace];
+            space.as_ref().map(|sp| msg_send![sp, bounds])
+        });
+        let scene_rect = win.as_ref().and_then(|w| scene_frame(w));
+        let win_frame = win.as_ref().map(|w| window_frame(w));
+        let win_bounds = win.as_ref().map(|w| w.bounds());
+        Some(format!(
+            "Duo diag [{tag}]\n\
+             UIScreen.bounds={screen:?}\n\
+             UIScreen.coordinateSpace={space:?}\n\
+             windowScene.coordinateSpace={scene:?}\n\
+             UIWindow.frame={wf:?}\n\
+             UIWindow.bounds={wb:?}\n\
+             WKWebView.frame={vf:?}\n\
+             WKWebView.safeArea={safe:?}",
+            tag = BUILD_TAG,
+            screen = screen_bounds,
+            space = screen_space,
+            scene = scene_rect,
+            wf = win_frame,
+            wb = win_bounds,
+            vf = view.frame(),
+            safe = view.safeAreaInsets(),
+        ))
+    }
+}
+
 fn normalize(inner: *mut c_void, nudge_frame: bool) -> Option<String> {
     unsafe {
         // WKWebView subclasses UIView; use UIKit's typed geometry methods rather than

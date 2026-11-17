@@ -55,6 +55,10 @@ jobs:
               /usr/libexec/PlistBuddy -c "Add :${key}:0 string UIInterfaceOrientationPortrait" "$plist"
               /usr/libexec/PlistBuddy -c "Add :${key}:1 string UIInterfaceOrientationLandscapeLeft" "$plist"
               /usr/libexec/PlistBuddy -c "Add :${key}:2 string UIInterfaceOrientationLandscapeRight" "$plist"
+              # TN3192 的可缩放前提是「支持所有界面方向」。少一档（倒置竖屏）时系统会把
+              # iPhone Duo 上的 App 降级成居中兼容窗口，表现为内屏两侧黑边。iPhone 本身
+              # 不会真的转到倒置，补上无副作用；UIDeviceFamily 含 iPad 时 ~ipad 段同样要全。
+              /usr/libexec/PlistBuddy -c "Add :${key}:3 string UIInterfaceOrientationPortraitUpsideDown" "$plist"
             done
             # iOS 27 SDK 起 scene 生命周期强制（TN3187）。src-tauri/Info.ios.plist 已在
             # 源头声明，这里幂等再补一次兜底：即使某次 Tauri 不再合并 Info.ios.plist，

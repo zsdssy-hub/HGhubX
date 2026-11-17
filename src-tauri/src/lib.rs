@@ -95,6 +95,12 @@ pub fn run() {
                     // 起一个常驻跟随把 window / 容器 / WKWebView 对齐到 windowScene 的真实尺寸，
                     // 否则前端 min-width:641px 的宽屏断点永远不触发。
                     ios_layout::start_scene_follower(webview);
+                    // 临时诊断：页面稳定后把系统实际给到的几何打成浮层，20 秒自动消失。
+                    let diag_wv = (*webview).clone();
+                    tauri::async_runtime::spawn(async move {
+                        tokio::time::sleep(std::time::Duration::from_millis(900)).await;
+                        ios_layout::report(&diag_wv);
+                    });
                     let wv = (*webview).clone();
                     tauri::async_runtime::spawn(async move {
                         for delay_ms in [80_u64, 350] {
