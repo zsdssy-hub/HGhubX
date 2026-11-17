@@ -6,12 +6,26 @@ on:
 jobs:
   ios:
     name: iOS build only
-    runs-on: macos-latest
+    runs-on: xcode-27
     timeout-minutes: 60
     env:
       APPLE_DEVELOPMENT_TEAM: "ABCDE12345"
     steps:
       - uses: actions/checkout@v7
+
+      # iPhone Duo 的显示档位由「二进制链接的 SDK」决定，不是设备系统版本：
+      #   iOS 26 SDK 及更早 → 内屏居中显示、四周留白
+      #   iOS 27 SDK        → 撑开但非 edge-to-edge
+      #   iOS 27.1 SDK      → 真正全屏 edge-to-edge
+      # GitHub 托管镜像 xcode-27（macOS 27 / arm64）自带 Xcode 27 工具链，
+      # 不再硬指定小版本——镜像里没有的版本会导致 job 直接失败。
+      # 实际 SDK 版本见下一步打印。
+
+      - name: 打印工具链版本
+        run: |
+          xcodebuild -version
+          echo "iOS SDK: $(xcrun --sdk iphoneos --show-sdk-version)"
+          echo "iOS SDK path: $(xcrun --sdk iphoneos --show-sdk-path)"
 
       - uses: pnpm/action-setup@v6
         with:
@@ -42,6 +56,12 @@ jobs:
               /usr/libexec/PlistBuddy -c "Add :${key}:1 string UIInterfaceOrientationLandscapeLeft" "$plist"
               /usr/libexec/PlistBuddy -c "Add :${key}:2 string UIInterfaceOrientationLandscapeRight" "$plist"
             done
+            # iOS 27 SDK 起 scene 生命周期强制（TN3187）。src-tauri/Info.ios.plist 已在
+            # 源头声明，这里幂等再补一次兜底：即使某次 Tauri 不再合并 Info.ios.plist，
+            # 也不会出现「装完一启动就被 UIKit 杀掉」。不要写 UISceneConfigurations。
+            /usr/libexec/PlistBuddy -c "Delete :UIApplicationSceneManifest" "$plist" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :UIApplicationSceneManifest dict" "$plist"
+            /usr/libexec/PlistBuddy -c "Add :UIApplicationSceneManifest:UIApplicationSupportsMultipleScenes bool false" "$plist"
             /usr/libexec/PlistBuddy -c "Delete :NSAppTransportSecurity" "$plist" 2>/dev/null || true
             /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" "$plist"
             /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoads bool true" "$plist"

@@ -1,0 +1,21 @@
+/* iPhone Duo 展开态（宽屏）适配
+   单独成文件，避免整份覆盖上游 ios.css；由 src/index.css 的 @import 引入。
+   档位由二进制链接的 SDK 决定：iOS 26 及更早居中留白 / iOS 27 撑开 / iOS 27.1 满屏。 */
+/* ===== iPhone Duo 内屏（展开态，视口宽 > 640px）=====
+   App.tsx 用 ResizeObserver 判 el.clientWidth > 640 置 wide，
+   这里同步放宽内容网格与底部胶囊导航，避免内屏上仍按窄屏排版留大片空白。 */
+@media (min-width:641px) {
+  .ios-page { padding-inline:28px; }
+  .ios-media-grid { gap:30px 22px; }
+  .ios-media-grid.is-wide { grid-template-columns:repeat(auto-fill,minmax(208px,1fr)); gap:34px 26px; }
+  .ios-mobile-nav .hg-glass { width:min(100%,640px); }
+  .ios-search-hot-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .ios-settings-fields>.ios-appearance-row { grid-template-columns:36px minmax(0,1fr) auto; }
+  .ios-collection-links { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+
+/* Duo 内屏更宽：分栏充分利用横向空间 */
+@media (min-width:900px) {
+  .ios-media-grid.is-wide { grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); }
+  .ios-mobile-nav .hg-glass { width:min(100%,720px); }
+}

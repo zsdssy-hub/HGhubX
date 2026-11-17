@@ -16,5 +16,19 @@
       </dict>
     </dict>
   </dict>
+  <!-- iOS 27 SDK（Xcode 27+）起 UIKit 强制 scene 生命周期（TN3187）：凡是链接
+       iOS 27 SDK 的 App，Info.plist 里没有 UIApplicationSceneManifest 就会被 UIKit
+       在启动阶段直接杀掉（日志：UIScene life cycle is required for apps built with
+       this SDK），Rust 代码一行都跑不到。
+       Tao 0.35+ 自带 TaoSceneDelegate，并在 application delegate 里实现了
+       application:configurationForConnectingSceneSession:options:，所以单窗口 App
+       只需声明 UIApplicationSupportsMultipleScenes=false，绝不要写空的
+       UISceneConfigurations —— 空配置会触发 NoSceneLifecycleAdoption 崩溃
+       （tauri-apps/tauri#15719）。 -->
+  <key>UIApplicationSceneManifest</key>
+  <dict>
+    <key>UIApplicationSupportsMultipleScenes</key>
+    <false/>
+  </dict>
 </dict>
 </plist>
