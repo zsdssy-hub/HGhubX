@@ -79,6 +79,12 @@ objc2-foundation = { version = "0.3", default-features = false, features = ["std
 [target.'cfg(target_os = "ios")'.dependencies]
 getrandom = "=0.3.4"
 objc2 = "0.6"
+# CGRect：用 msg_send 收发 windowScene.coordinateSpace.bounds 需要它的 Encode 实现。
+objc2-core-foundation = { version = "0.3", default-features = false, features = [
+  "std",
+  "CFCGTypes",
+  "objc2",
+] }
 objc2-ui-kit = { version = "0.3", default-features = false, features = [
   "std",
   "objc2-core-foundation",

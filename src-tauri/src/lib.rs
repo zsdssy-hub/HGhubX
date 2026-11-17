@@ -91,6 +91,10 @@ pub fn run() {
                     // 默认关闭 WKWebView 文本交互，消除视频长按快进时的系统放大镜。
                     // 前端在输入框聚焦时再按需打开（见 api::set_text_interaction）。
                     ios_layout::set_text_interaction_on_webview(webview, false);
+                    // iPhone Duo 内屏展开/合拢、旋转后，tao 的 UIWindow 仍停在外屏尺寸，
+                    // 起一个常驻跟随把 window / 容器 / WKWebView 对齐到 windowScene 的真实尺寸，
+                    // 否则前端 min-width:641px 的宽屏断点永远不触发。
+                    ios_layout::start_scene_follower(webview);
                     let wv = (*webview).clone();
                     tauri::async_runtime::spawn(async move {
                         for delay_ms in [80_u64, 350] {
